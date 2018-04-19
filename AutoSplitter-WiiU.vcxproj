@@ -1,0 +1,153 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{4C26CB08-51A9-4934-B488-729972CD1EC0}</ProjectGuid>
+    <Keyword>MakeFileProj</Keyword>
+    <ProjectName>AutoSplitter-WiiU</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <NMakeBuildCommandLine>make</NMakeBuildCommandLine>
+    <NMakeOutput>AutoSplitter.elf</NMakeOutput>
+    <NMakeCleanCommandLine>make clean</NMakeCleanCommandLine>
+    <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <NMakeBuildCommandLine>make</NMakeBuildCommandLine>
+    <NMakeOutput>AutoSplitterInputDisplay.elf</NMakeOutput>
+    <NMakeCleanCommandLine>make clean</NMakeCleanCommandLine>
+    <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <IncludePath>src;C:\devkitPro\portlibs\ppc\include;C:\devkitPro\libogc\include;C:\devkitPro\devkitPPC\include;C:\devkitPro\devkitPPC\powerpc-eabi\include;C:\devkitPro\devkitARM\include;C:\devkitPro\devkitARM\arm-none-eabi\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="src\common\common.h" />
+    <ClInclude Include="src\common\fs_defs.h" />
+    <ClInclude Include="src\common\kernel_defs.h" />
+    <ClInclude Include="src\common\loader_defs.h" />
+    <ClInclude Include="src\common\os_defs.h" />
+    <ClInclude Include="src\common\thread_defs.h" />
+    <ClInclude Include="src\common\types.h" />
+    <ClInclude Include="src\dynamic_libs\aoc_functions.h" />
+    <ClInclude Include="src\dynamic_libs\ax_functions.h" />
+    <ClInclude Include="src\dynamic_libs\fs_functions.h" />
+    <ClInclude Include="src\dynamic_libs\gx2_functions.h" />
+    <ClInclude Include="src\dynamic_libs\gx2_types.h" />
+    <ClInclude Include="src\dynamic_libs\os_functions.h" />
+    <ClInclude Include="src\dynamic_libs\padscore_functions.h" />
+    <ClInclude Include="src\dynamic_libs\socket_functions.h" />
+    <ClInclude Include="src\dynamic_libs\sys_functions.h" />
+    <ClInclude Include="src\dynamic_libs\vpad_functions.h" />
+    <ClInclude Include="src\fs\CFile.hpp" />
+    <ClInclude Include="src\fs\DirList.h" />
+    <ClInclude Include="src\fs\fs_utils.h" />
+    <ClInclude Include="src\fs\sd_fat_devoptab.h" />
+    <ClInclude Include="src\game\memory_area_table.h" />
+    <ClInclude Include="src\game\rpx_rpl_table.h" />
+    <ClInclude Include="src\kernel\kernel_functions.h" />
+    <ClInclude Include="src\kernel\syscalls.h" />
+    <ClInclude Include="src\main.h" />
+    <ClInclude Include="src\patcher\fs_logger.h" />
+    <ClInclude Include="src\patcher\function_hooks.h" />
+    <ClInclude Include="src\autoSplitter.h" />
+    <ClInclude Include="src\system\exception_handler.h" />
+    <ClInclude Include="src\system\memory.h" />
+    <ClInclude Include="src\utils\logger.h" />
+    <ClInclude Include="src\utils\net.h" />
+    <ClInclude Include="src\utils\StringTools.h" />
+    <ClInclude Include="src\utils\utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\dynamic_libs\aoc_functions.c" />
+    <ClCompile Include="src\dynamic_libs\ax_functions.c" />
+    <ClCompile Include="src\dynamic_libs\fs_functions.c" />
+    <ClCompile Include="src\dynamic_libs\gx2_functions.c" />
+    <ClCompile Include="src\dynamic_libs\os_functions.c" />
+    <ClCompile Include="src\dynamic_libs\padscore_functions.c" />
+    <ClCompile Include="src\dynamic_libs\socket_functions.c" />
+    <ClCompile Include="src\dynamic_libs\sys_functions.c" />
+    <ClCompile Include="src\dynamic_libs\vpad_functions.c" />
+    <ClCompile Include="src\entry.c" />
+    <ClCompile Include="src\fs\CFile.cpp" />
+    <ClCompile Include="src\fs\DirList.cpp" />
+    <ClCompile Include="src\fs\fs_utils.c" />
+    <ClCompile Include="src\fs\sd_fat_devoptab.c" />
+    <ClCompile Include="src\game\memory_area_table.c" />
+    <ClCompile Include="src\game\rpx_rpl_table.c" />
+    <ClCompile Include="src\kernel\kernel_functions.c" />
+    <ClCompile Include="src\kernel\syscalls.c" />
+    <ClCompile Include="src\main.c" />
+    <ClCompile Include="src\patcher\fs_logger.c" />
+    <ClCompile Include="src\patcher\function_hooks.cpp" />
+    <ClCompile Include="src\autoSplitter.c" />
+    <ClCompile Include="src\system\exception_handler.c" />
+    <ClCompile Include="src\system\memory.c" />
+    <ClCompile Include="src\utils\logger.c" />
+    <ClCompile Include="src\utils\net.c" />
+    <ClCompile Include="src\utils\StringTools.cpp" />
+    <ClCompile Include="src\utils\utils.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\link.ld" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
