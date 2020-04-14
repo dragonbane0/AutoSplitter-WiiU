@@ -168,6 +168,16 @@ void * MEM2_alloc(unsigned int size, unsigned int align)
     return __wrap_memalign(align, size);
 }
 
+void * MEM2_malloc(unsigned int size)
+{
+	return __wrap_malloc(size);
+}
+
+void * MEM2_realloc(void *ptr, unsigned int newSize)
+{
+	return __wrap_realloc(ptr, newSize);
+}
+
 void MEM2_free(void *ptr)
 {
     __wrap_free(ptr);

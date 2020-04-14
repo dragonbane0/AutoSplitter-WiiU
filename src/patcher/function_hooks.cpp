@@ -36,6 +36,7 @@
 #include "utils/logger.h"
 #include "common/common.h"
 #include "autoSplitter.h"
+#include "autoSplitterSystem.h"
 #include "main.h"
 
 #define LIB_CODE_RW_BASE_OFFSET                         0xC1000000
@@ -142,6 +143,15 @@ DECL(int, socket_lib_finish, void)
 	return 0;
 }
 
+//Gets called on process exit
+DECL(void, _Exit, void)
+{
+	//Cleanup
+	DestroyAutoSplitterSystem();
+
+	real__Exit();
+}
+
 /* *****************************************************************************
  * Creates function pointer array
  * ****************************************************************************/
@@ -162,7 +172,11 @@ static struct hooks_magic_t
 method_hooks[] = 
 {
     MAKE_MAGIC(VPADRead,                             LIB_VPAD,STATIC_FUNCTION),
-	MAKE_MAGIC(socket_lib_finish,                    LIB_NSYSNET,STATIC_FUNCTION)
+	MAKE_MAGIC(socket_lib_finish,                    LIB_NSYSNET,STATIC_FUNCTION),
+	MAKE_MAGIC(_Exit,								 LIB_CORE_INIT,STATIC_FUNCTION),
+	//MAKE_MAGIC(KPADRead,							 LIB_PADSCORE,STATIC_FUNCTION),
+	//MAKE_MAGIC(WPADRead,							 LIB_PADSCORE,STATIC_FUNCTION),
+	//MAKE_MAGIC(WPADProbe,							 LIB_PADSCORE,DYNAMIC_FUNCTION),
 };
 
 //! buffer to store our 7 instructions needed for our replacements

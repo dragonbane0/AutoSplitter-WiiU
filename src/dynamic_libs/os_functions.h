@@ -78,6 +78,7 @@ extern int (* OSDynLoad_FindExport)(u32 handle, int isdata, const char *symbol, 
 
 
 extern void (* OSBlockMove)(void* dst, const void* src, u32 size, int flush);
+extern int (* OSIsAddressValid)(int addr);
 
 //!----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //! Security functions

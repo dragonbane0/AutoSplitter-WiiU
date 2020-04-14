@@ -14,6 +14,7 @@
 #include "kernel/syscalls.h"
 #include "system/exception_handler.h"
 #include "utils/logger.h"
+#include "autoSplitterSystem.h"
 
 struct pygecko_bss_t //Helper struct for threads (supports storing an error code)
 {
@@ -89,9 +90,8 @@ static int sendbyte(struct pygecko_bss_t *bss, int sock, unsigned char byte) //S
 	return sendwait(bss, sock, buffer, 1);
 }
 
-
 //Handles the connection to the WiiU Autosplitter PC App
-static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd) 
+static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd)
 {
 	int ret;
 
@@ -100,76 +100,16 @@ static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd)
 
 	//Pointers to useful memory addresses
 	//TWW HD Stuff (+6FF000)
-	const unsigned char *frameCountPtr = (const unsigned char *)0x10701758;
-	unsigned char frameCount[4];
-
-	const unsigned char *AnglePtr = (const unsigned char *)0x1096EF12;
-	unsigned char Angle[2];
-
-	const unsigned char *CurrentStagePtr = (const unsigned char *)0x109763E4;
-	unsigned char CurrentStage[7];
-
-	const unsigned char *CurrentRoomPtr = (const unsigned char *)0x10978CF8; 
-	unsigned char CurrentRoom[1];
-
-	const unsigned char *CurrentSpawnPtr = (const unsigned char *)0x109763ED;
-	unsigned char CurrentSpawn[1];
-
-	const unsigned char *CurrentLayerPtr = (const unsigned char *)0x109763EF;
-	unsigned char CurrentLayer[1];
-
 
 	//TP HD Stuff : +631E00
 	const unsigned char *CurrentStagePtr_TP = (const unsigned char *)0x1064CDE8;
 	unsigned char CurrentStage_TP[7];
 
-	const unsigned char *CurrentRoomPtr_TP = (const unsigned char *)0x106813D4;
-	unsigned char CurrentRoom_TP[1];
-
-	const unsigned char *CurrentSpawnPtr_TP = (const unsigned char *)0x1064CDF1;
-	unsigned char CurrentSpawn_TP[1];
-
-	const unsigned char *CurrentStatePtr_TP = (const unsigned char *)0x1062915B;
-	unsigned char CurrentState_TP[1];
-
-
-	const unsigned char *NextStagePtr_TP = (const unsigned char *)0x1064CDF6;
-	unsigned char NextStage_TP[7];
-
-	const unsigned char *NextRoomPtr_TP = (const unsigned char *)0x1064CE00;
-	unsigned char NextRoom_TP[1];
-
 	const unsigned char *NextSpawnPtr_TP = (const unsigned char *)0x1064CDFF;
 	unsigned char NextSpawn_TP[1];
 
-	const unsigned char *NextStatePtr_TP = (const unsigned char *)0x1064CE01;
-	unsigned char NextState_TP[1];
-
-	const unsigned char *TriggerLoadingPtr_TP = (const unsigned char *)0x1064CE04;
-	unsigned char TriggerLoading_TP[1];
-
 	const unsigned char *IsLoadingPtr_TP = (const unsigned char *)0x10680E94;
 	unsigned char IsLoading_TP[4];
-
-	const unsigned char *LinkPointerPtr_TP = (const unsigned char *)0x10681E40;
-	unsigned int LinkPointer_TP;
-
-	unsigned char Angle_TP[2];
-
-	const unsigned char *DialogPointerPtr_TP = (const unsigned char *)0x106802B0;
-	unsigned int DialogPointer_TP;
-
-	unsigned char CurrentDialogID_TP[2];
-	unsigned char NextDialogID_TP[2];
-
-	const unsigned char *CageBreakFlagPtr_TP = (const unsigned char *)0x1064894E;
-	unsigned char CageBreakFlag_TP[1];
-
-	const unsigned char *MSRemovedFlagPtr_TP = (const unsigned char *)0x10647D58;
-	unsigned char MSRemovedFlag_TP[1];
-
-	const unsigned char *LightSwordCSFlagPtr_TP = (const unsigned char *)0x1064894C;
-	unsigned char LightSwordCSFlag_TP[1];
 
 	const unsigned char *IsHeroModeFlagPtr_TP = (const unsigned char *)0x10647D1F;
 	unsigned char IsHeroModeFlag_TP[1];
@@ -185,36 +125,39 @@ static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd)
 	const unsigned char *EventFlagPtr_TP = (const unsigned char *)0x1064CF95;
 	unsigned char EventFlag_TP[1];
 
-	unsigned int AnimationPointer_TP;
-	unsigned char AnimationID_TP[4];
-	unsigned char AnimationTimer_TP[2];
-
-	u8 lastTitleScreenFlag = 0;
+	u8 lastTitleScreenFlag_TP = 0;
+	int newRunConditions_TP = 0;
+	u8 loadingStatus_TP = 0;
+	u8 firstStart_TP = 1;
 
 	//DKC Stuff
-	unsigned char isLoading_DKC[1];
-	unsigned char doSplit_DKC[1];
+	u8 loadingStatus_DKC = 0;
 
 	//Global
 	int gameID = -1;
 
-	unsigned char isNewRun[1], hasRunEnded[1];
-	int newRunConditions = 0;
-	u8 loadingStatus = 0;
+	u8 newRunOut[1], endRunOut[1], doSplitOut[1];
+	u8 isLoadingOut[1];
+	u8 prevNewRun = 0, prevEndRun = 0, prevIsLoading = 0;
+
+	u32 currentSplitIndex = 0;
 
 	double OneMillisecond = 0.0f;
 	int64_t timeBase = 0;
 	u32 loadingFrames = 0;
-	u8 loadingStatusChange = 0;
+
+	u64 currTitleID = OSGetTitleID();
 
 	//Check which game is running
-	if (OSGetTitleID() != 0 && (OSGetTitleID() == 0x0005000010143500 || OSGetTitleID() == 0x0005000010143600 || OSGetTitleID() == 0x0005000010143400)) //TWW HD is running
+	if (currTitleID != 0 && (currTitleID == 0x0005000010143500 || currTitleID == 0x0005000010143600 || currTitleID == 0x0005000010143400)) //TWW HD is running
 		gameID = 0;
-	else if (OSGetTitleID() != 0 && (OSGetTitleID() == 0x000500001019E500 || OSGetTitleID() == 0x000500001019E600 || OSGetTitleID() == 0x000500001019C800)) //TP HD is running
+	else if (currTitleID != 0 && (currTitleID == 0x000500001019E500 || currTitleID == 0x000500001019E600 || currTitleID == 0x000500001019C800)) //TP HD is running
 		gameID = 1;
-	else if (OSGetTitleID() != 0 && (OSGetTitleID() == 0x0005000010137F00 || OSGetTitleID() == 0x0005000010138300 || OSGetTitleID() == 0x0005000010144800)) //DKC Tropical Freeze is running
+	else if (currTitleID != 0 && (currTitleID == 0x0005000010137F00 || currTitleID == 0x0005000010138300 || currTitleID == 0x0005000010144800)) //DKC Tropical Freeze is running
 		gameID = 2;
 
+
+	//Function Hook vars (mainly for DKC TF)
 	g_newRun = 0;
 	g_endRun = 0;
 	g_doSplit = 0;
@@ -226,66 +169,187 @@ static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd)
 	OneMillisecond = systemInfo->busSpeed / 4.0f;
 	OneMillisecond = OneMillisecond / 1000.0f;
 
+	//Cleanup system
+	DestroyAutoSplitterSystem();
+
+	//Send title id as handshake
+	unsigned char bufferHandshake[8];
+	memcpy(bufferHandshake, &currTitleID, 8);
+
+	ret = sendwait(bss, clientfd, bufferHandshake, sizeof(bufferHandshake));
+	CHECK_ERROR(ret < 0);
+
+	//Receive jsonString length as response to handshake
+	u32 strLength = 0;
+
+	ret = recvwait(bss, clientfd, bufferHandshake, 4);
+	CHECK_ERROR(ret < 0);
+
+	memcpy(&strLength, bufferHandshake, 4);
+
+	if (strLength == 0)
+	{
+		//Title id mismatched --> Abort
+		bss->line = __LINE__;
+		goto error;
+
+		return 0;
+	}
+
+	//log_printf("Init1! length: %i", strLength);
+
+	//Receive json string
+	char* jsonStringBuffer = memalign(0x80, strLength);
+
+	ret = recvwait(bss, clientfd, jsonStringBuffer, strLength);
+	CHECK_ERROR(ret < 0);
+
+	//Setup AutoSplitting system
+	int success = SetupAutoSplitterSystem(jsonStringBuffer);
+
+	free(jsonStringBuffer);
+
+	if (success == -1)
+	{
+		log_printf("Init error");
+
+		//Json data was faulty. Send error code and abort
+		bufferHandshake[0] = 0xEE;
+		ret = sendwait(bss, clientfd, bufferHandshake, 1);
+
+		bss->line = __LINE__;
+		goto error;
+
+		return 0;
+	}
+	else
+	{
+		log_printf("Init done");
+
+		//Send Status OK and enter loop
+		bufferHandshake[0] = 0x00;
+		ret = sendwait(bss, clientfd, bufferHandshake, 1);
+		CHECK_ERROR(ret < 0);
+	}
+
+
+	//Main Loop
 	while (1) 
 	{
-		isNewRun[0] = 0;
-		hasRunEnded[0] = 0;
+		//Reset at start of cycle
+		newRunOut[0] = 0;
+		endRunOut[0] = 0;
+		doSplitOut[0] = 0;
+		isLoadingOut[0] = 0xFF;
 		timeBase = 0;
-		loadingStatusChange = 0;
 
 	    GX2WaitForVsync(); //Executes 60 times a second (60 fps)
 
-		if (gameID == 0) //TWW HD is running (TODO)
-		{
-			//Add TWW HD Autosplitting Stuff here
-		}
-		else if (gameID == 1) //TP HD is running
-		{
-			//Gets the time since epoch in Milliseconds
-			timeBase = OSGetTime();
-			timeBase = timeBase / OneMillisecond;
+		//Runs for every game
+		u8 inNewRun = 0, inEndRun = 0, inDoSplit = 0, inLoadingStatus = 0;
+		int splitStatus = RunAutoSplitterSystem(currentSplitIndex, &inNewRun, &inEndRun, &inDoSplit, &inLoadingStatus);
 
+		if (splitStatus != 0) //critical error, terminate connection
+		{
+			bss->line = __LINE__;
+			goto error;
+
+			return 0;
+		}
+
+		//Generic run end
+		if (inEndRun != 0xFF)
+		{
+			if (prevEndRun != inEndRun)
+			{
+				prevEndRun = inEndRun;
+
+				if (inEndRun == 1)
+				{
+					endRunOut[0] = 1;
+
+					prevNewRun = 0;
+				}
+			}
+		}
+
+		//Generic new run/reset
+		if (inNewRun != 0xFF)
+		{
+			if (prevNewRun != inNewRun)
+			{
+				prevNewRun = inNewRun;
+
+				if (inNewRun == 1)
+				{
+					newRunOut[0] = 1;
+
+					endRunOut[0] = 0;
+					doSplitOut[0] = 0;
+					isLoadingOut[0] = 0;
+
+					prevEndRun = 0;
+					prevIsLoading = 0;
+					currentSplitIndex = 0;
+				}
+			}
+		}
+
+		//Generic split
+		if (inDoSplit == 1)
+		{
+			currentSplitIndex++;
+			doSplitOut[0] = 1;
+		}
+
+		//Generic loading code
+		if (inLoadingStatus != 0xFF)
+		{
+			if (inLoadingStatus == 1)
+			{
+				if (prevIsLoading == 0) //Loading Start
+				{
+					loadingFrames = 0;
+					prevIsLoading = 1;
+
+					isLoadingOut[0] = 1; //Something to send
+				}
+				else
+				{
+					loadingFrames++;
+				}
+			}
+			else
+			{
+				if (prevIsLoading == 1) //Loading End
+				{
+					loadingFrames++;
+					prevIsLoading = 0;
+
+					isLoadingOut[0] = 0; //Something to send
+				}
+				else
+				{
+					loadingFrames = 0;
+				}
+			}
+		}
+
+
+		//Game specific overrides
+		if (gameID == 1) //TP HD is running
+		{
 			//Current Map Info Stuff
 			memcpy(CurrentStage_TP, CurrentStagePtr_TP, 7); //Copies 7 bytes from the pointer address to a variable ready for sending
-			memcpy(CurrentRoom_TP, CurrentRoomPtr_TP, 1);
-			memcpy(CurrentSpawn_TP, CurrentSpawnPtr_TP, 1);
-			memcpy(CurrentState_TP, CurrentStatePtr_TP, 1);
 
 			//Next Map Info Stuff
-			memcpy(NextStage_TP, NextStagePtr_TP, 7);
-			memcpy(NextRoom_TP, NextRoomPtr_TP, 1);
 			memcpy(NextSpawn_TP, NextSpawnPtr_TP, 1);
-			memcpy(NextState_TP, NextStatePtr_TP, 1);
 
 			//Loading Stuff
-			memcpy(TriggerLoading_TP, TriggerLoadingPtr_TP, 1);
 			memcpy(IsLoading_TP, IsLoadingPtr_TP, 4);
 
 			//Event Flag Stuff
 			memcpy(EventFlag_TP, EventFlagPtr_TP, 1);
-
-			//Dialog ID Pointer Section
-			memcpy(&DialogPointer_TP, DialogPointerPtr_TP, 4); //This is a sub pointer used by the game to find specific sections in dynamic RAM
-
-			if (DialogPointer_TP < 0x10000000) //Pointer isnt in use atm
-			{
-				memset(CurrentDialogID_TP, 0, 2);
-				memset(NextDialogID_TP, 0, 2);
-			}
-			else
-			{
-				unsigned char *CurrentDialogIDPtr_TP = (unsigned char *)DialogPointer_TP + 0x92;
-				unsigned char *NextDialogIDPtr_TP = (unsigned char *)DialogPointer_TP + 0x2A;
-
-				memcpy(CurrentDialogID_TP, CurrentDialogIDPtr_TP, 2);
-				memcpy(NextDialogID_TP, NextDialogIDPtr_TP, 2);
-			}
-
-			//Flag Stuff
-			memcpy(CageBreakFlag_TP, CageBreakFlagPtr_TP, 1);
-			memcpy(MSRemovedFlag_TP, MSRemovedFlagPtr_TP, 1);
-			memcpy(LightSwordCSFlag_TP, LightSwordCSFlagPtr_TP, 1);
-
 
 			//Get Title Screen Pointer
 			memcpy(&TitleScreenPointer_TP, TitleScreenPointerPtr_TP, 4);
@@ -297,20 +361,35 @@ static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd)
 			else
 			{
 				unsigned char *TitleScreenFlagPtr_TP = (unsigned char *)TitleScreenPointer_TP + 0x45;
-
 				memcpy(TitleScreenFlag_TP, TitleScreenFlagPtr_TP, 1); //11 = normal load; 12 = title screen; 13 = file menu
 			}
 
+			//Make sure on first connection that the user is not inside the file menu already
+			if (firstStart_TP == 1)
+			{
+				firstStart_TP = 0;
+
+				if (!strcmp((const char*)CurrentStage_TP, "F_SP102") && EventFlag_TP[0] == 0)
+				{
+					bufferHandshake[0] = 0x02; //Error code invalid start
+					ret = sendwait(bss, clientfd, bufferHandshake, 1);
+
+					bss->line = __LINE__;
+					goto error;
+
+					return 0;
+				}
+			}
 
 			//New Run Condition Check		
-			if (newRunConditions == 0) //Wait for FileSelect Loading Flag (13) and IsLoading = 1
+			if (newRunConditions_TP == 0) //Wait for FileSelect Loading Flag (13) and IsLoading = 1
 			{
 				if (TitleScreenFlag_TP[0] == 13 && IsLoading_TP[0] == 0 && IsLoading_TP[1] == 0 && IsLoading_TP[2] == 0 && IsLoading_TP[3] == 1)
 				{
-					newRunConditions = 1;
+					newRunConditions_TP = 1;
 				}
 			}
-			else if (newRunConditions == 1) //Wait for IsLoading = 0 then set IsHeroMode = 2
+			else if (newRunConditions_TP == 1) //Wait for IsLoading = 0 then set IsHeroMode = 2
 			{
 				if (IsLoading_TP[0] == 0 && IsLoading_TP[1] == 0 && IsLoading_TP[2] == 0 && IsLoading_TP[3] == 0)
 				{
@@ -321,10 +400,10 @@ static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd)
 
 					DCFlushRange(heroModeFlagNew, 1);
 
-					newRunConditions = 2;
+					newRunConditions_TP = 2;
 				}
 			}
-			else if (newRunConditions == 2) //Wait for IsHeroMode to be changed to 0 or 1 then check Playtime Timer = 0
+			else if (newRunConditions_TP == 2) //Wait for IsHeroMode to be changed to 0 or 1 then check Playtime Timer = 0
 			{
 				memcpy(IsHeroModeFlag_TP, IsHeroModeFlagPtr_TP, 1);
 
@@ -338,113 +417,72 @@ static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd)
 						if ((TitleScreenFlag_TP[0] == 12) || (IsLoading_TP[0] == 0 && IsLoading_TP[1] == 0 && IsLoading_TP[2] == 0 && IsLoading_TP[3] == 1))
 						{
 							//User assigned an Amiibo to a file, reset conditions
-							newRunConditions = 0;
+							newRunConditions_TP = 0;
 						}
 						else //All is good, send isNewRun Command
 						{
-							isNewRun[0] = 1;
-							newRunConditions = 3;
+							newRunOut[0] = 1;
+							newRunConditions_TP = 3;
+
+							endRunOut[0] = 0;
+							doSplitOut[0] = 0;
+							isLoadingOut[0] = 0;
+
+							prevEndRun = 0;
+							currentSplitIndex = 0;
 						}
 					}
 					else //The user just loaded an existing file
 					{
-						newRunConditions = 3;
+						newRunConditions_TP = 3;
 					}
 				}
 				else if (strcmp((const char*)CurrentStage_TP, "F_SP102")) //Something went wrong, abort
 				{
-					newRunConditions = 0;
+					newRunConditions_TP = 0;
 				}
 			}
-			else if (newRunConditions == 3) //Wait until current Stage is not F_SP102 (Title Screen) then reset conditions
+			else if (newRunConditions_TP == 3) //Wait until current Stage is not F_SP102 (Title Screen) then reset conditions
 			{
 				if (strcmp((const char*)CurrentStage_TP, "F_SP102"))
 				{
-					newRunConditions = 0;
+					newRunConditions_TP = 0;
 				}
 			}
 
-			//Run Ending Condition Check
-			if (!strcmp((const char*)CurrentStage_TP, "D_MN09B")) //Current Stage = D_MN09B (Horseback Ganon)
-			{
-				if (EventFlag_TP[0] == 1) //Event Flag = 1
-				{
-					//Grab Links Angle
-					memcpy(&LinkPointer_TP, LinkPointerPtr_TP, 4);
-
-					if (LinkPointer_TP < 0x10000000)
-					{
-						memset(Angle_TP, 0, 2);
-					}
-					else
-					{
-						unsigned char *AnglePtr_TP = (unsigned char *)LinkPointer_TP + 0x16;
-
-						memcpy(Angle_TP, AnglePtr_TP, 2);
-					}
-
-					if (Angle_TP[0] == 0xE0 && Angle_TP[1] == 0) //Links Angle = 57344
-					{
-						//Grab Links Animation ID and Timer
-						unsigned char *AnimationPointerPtr_TP = (unsigned char *)LinkPointer_TP + 0x1A6C;
-
-						memcpy(&AnimationPointer_TP, AnimationPointerPtr_TP, 4);
-
-						if (AnimationPointer_TP < 0x10000000)
-						{
-							memset(AnimationID_TP, 0, 4);
-							memset(AnimationTimer_TP, 0, 2);
-						}
-						else
-						{
-							unsigned char *AnimationIDPtr_TP = (unsigned char *)AnimationPointer_TP + 0;
-							unsigned char *AnimationTimerPtr_TP = (unsigned char *)AnimationPointer_TP + 4;
-
-							memcpy(AnimationID_TP, AnimationIDPtr_TP, 4);
-							memcpy(AnimationTimer_TP, AnimationTimerPtr_TP, 2);
-						}
-
-						if (AnimationID_TP[0] == 0 && AnimationID_TP[1] == 0 && AnimationID_TP[2] == 0 && AnimationID_TP[3] == 0x2C && AnimationTimer_TP[0] >= 0x42 && AnimationTimer_TP[1] >= 0) //Animation ID = 0x0000002C && Animation Timer >= 0x4200
-						{
-							hasRunEnded[0] = 1;
-						}
-					}
-				}
-			}
-		
 			//Don't set loading flag if void or title screen reset/file load (so mistakes are still punished the same way as with RTA timing)
-			if (loadingStatus == 0)
+			if (loadingStatus_TP == 0)
 			{
 				if (IsLoading_TP[0] == 0 && IsLoading_TP[1] == 0 && IsLoading_TP[2] == 0 && IsLoading_TP[3] == 1)
 				{
-					if (lastTitleScreenFlag == 1) //Handles file load cases (normal and with Amiibo)
+					if (lastTitleScreenFlag_TP == 1) //Handles file load cases (normal and with Amiibo)
 					{
-						loadingStatus = 2;
+						loadingStatus_TP = 2;
 					}
 
 					if (TitleScreenFlag_TP[0] == 12 || TitleScreenFlag_TP[0] == 13) //if title screen is loaded or is on title screen and load file menu
 					{
-						loadingStatus = 2;
-						lastTitleScreenFlag = 1;
+						loadingStatus_TP = 2;
+						lastTitleScreenFlag_TP = 1;
 					}
 					else
 					{
-						lastTitleScreenFlag = 0;
+						lastTitleScreenFlag_TP = 0;
 					}
 
 					if (NextSpawn_TP[0] == 0xFF) //if void/game over
 					{
-						loadingStatus = 2;
+						loadingStatus_TP = 2;
 					}
 				}
 			}
-			
+
 			//Adjust loading flag
-			if (loadingStatus == 2)
+			if (loadingStatus_TP == 2)
 			{
 				if (IsLoading_TP[0] == 0 && IsLoading_TP[1] == 0 && IsLoading_TP[2] == 0 && IsLoading_TP[3] == 0)
 				{
-					loadingStatus = 0;
+					loadingStatus_TP = 0;
 				}
 				else
 				{
@@ -455,10 +493,12 @@ static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd)
 			//Count loading frames
 			if (IsLoading_TP[0] == 0 && IsLoading_TP[1] == 0 && IsLoading_TP[2] == 0 && IsLoading_TP[3] == 1)
 			{
-				if (loadingStatus == 0) //Loading Start
+				if (loadingStatus_TP == 0) //Loading Start
 				{
 					loadingFrames = 0;
-					loadingStatus = 1;
+					loadingStatus_TP = 1;
+
+					isLoadingOut[0] = 1; //Something to send
 				}
 				else
 				{
@@ -467,106 +507,29 @@ static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd)
 			}
 			else
 			{
-				if (loadingStatus == 1) //Loading End
+				if (loadingStatus_TP == 1) //Loading End
 				{
 					loadingFrames++;
-					loadingStatus = 0;
+					loadingStatus_TP = 0;
+
+					isLoadingOut[0] = 0; //Something to send
 				}
 				else
 				{
 					loadingFrames = 0;
 				}
 			}
-
-
-			//Sending Data Section
-
-			//Send Cmd Bit
-			ret = sendwait(bss, clientfd, Cmd, 1);
-			CHECK_ERROR(ret < 0); //Check after every send if the data went through, if not disconnect immediately
-
-			//Current Stage Stuff
-			ret = sendwait(bss, clientfd, CurrentStage_TP, 7);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, CurrentRoom_TP, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, CurrentSpawn_TP, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, CurrentState_TP, 1);
-			CHECK_ERROR(ret < 0);
-
-			//Next Stage Stuff
-			ret = sendwait(bss, clientfd, NextStage_TP, 7);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, NextRoom_TP, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, NextSpawn_TP, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, NextState_TP, 1);
-			CHECK_ERROR(ret < 0);
-
-			//Loading Stuff
-			ret = sendwait(bss, clientfd, TriggerLoading_TP, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, IsLoading_TP, 4);
-			CHECK_ERROR(ret < 0);
-
-			//Event Flag
-			ret = sendwait(bss, clientfd, EventFlag_TP, 1);
-			CHECK_ERROR(ret < 0);
-
-			//Dialog ID
-			ret = sendwait(bss, clientfd, CurrentDialogID_TP, 2);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, NextDialogID_TP, 2);
-			CHECK_ERROR(ret < 0);
-
-			//Flags
-			ret = sendwait(bss, clientfd, CageBreakFlag_TP, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, MSRemovedFlag_TP, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, LightSwordCSFlag_TP, 1);
-			CHECK_ERROR(ret < 0);
-
-			//New Run/End Run
-			ret = sendwait(bss, clientfd, isNewRun, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, hasRunEnded, 1);
-			CHECK_ERROR(ret < 0);
-
-			//Current Timebase and Loading Frames
-			ret = sendwait(bss, clientfd, &timeBase, 8);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, &loadingFrames, 4);
-			CHECK_ERROR(ret < 0);
-		}
+		}	
 		else if (gameID == 2) //DKC Tropical Freeze is running
 		{
 			if (g_isLoading == 1)
 			{
-				if (loadingStatus == 0) //Loading Start
+				if (loadingStatus_DKC == 0) //Loading Start
 				{
 					loadingFrames = 0;
-					loadingStatus = 1;
+					loadingStatus_DKC = 1;
 
-					//Gets the time since epoch in Milliseconds
-					timeBase = OSGetTime();
-					timeBase = timeBase / OneMillisecond;
-
-					loadingStatusChange = 1; //Something to send
+					isLoadingOut[0] = 1; //Something to send
 				}
 				else
 				{
@@ -575,15 +538,12 @@ static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd)
 			}
 			else
 			{
-				if (loadingStatus == 1) //Loading End
+				if (loadingStatus_DKC == 1) //Loading End
 				{
 					loadingFrames++;
-					loadingStatus = 0;
+					loadingStatus_DKC = 0;
 
-					timeBase = OSGetTime();
-					timeBase = timeBase / OneMillisecond;
-
-					loadingStatusChange = 1;
+					isLoadingOut[0] = 0; //Something to send
 				}
 				else
 				{
@@ -594,88 +554,82 @@ static int run_autoSplitter(struct pygecko_bss_t *bss, int clientfd)
 			//New Run/Reset
 			if (g_newRun == 1)
 			{
-				isNewRun[0] = 1;
+				newRunOut[0] = 1;
+
 				g_newRun = 0;
 				g_endRun = 0;
 				g_doSplit = 0;
 
-				timeBase = OSGetTime();
-				timeBase = timeBase / OneMillisecond;
+				endRunOut[0] = 0;
+				doSplitOut[0] = 0;
+
+				currentSplitIndex = 0;
 			}
 
 			//Run End
 			if (g_endRun == 1)
 			{
-				hasRunEnded[0] = 1;
-				g_endRun = 0;
+				endRunOut[0] = 1;
 
-				timeBase = OSGetTime();
-				timeBase = timeBase / OneMillisecond;
+				g_endRun = 0;
 			}
 
 			//Split
 			if (g_doSplit == 1)
 			{
-				doSplit_DKC[0] = 1;
+				doSplitOut[0] = 1;
+
 				g_doSplit = 0;
-
-				timeBase = OSGetTime();
-				timeBase = timeBase / OneMillisecond;
 			}
-			else
-			{
-				doSplit_DKC[0] = 0;
-			}
+		}
 
-			//Is Loading
-			if (g_isLoading == 1)
-			{
-				isLoading_DKC[0] = 1;
-			}
-			else
-			{
-				isLoading_DKC[0] = 0;
-			}
-
-			if (isNewRun[0] == 0 && hasRunEnded[0] == 0 && doSplit_DKC[0] == 0 && loadingStatusChange == 0) //Check if there is anything to send; DKC is a demanding game so don't send needless data
-			{
-				Cmd[0] = 0;
-
-				ret = sendwait(bss, clientfd, Cmd, 1);
-				CHECK_ERROR(ret < 0);
-
-				continue;
-			}
-
-			//Send Cmd Bit
-			Cmd[0] = 1;
-
+		//Check if there is anything to send; don't send needless data if not
+		if (newRunOut[0] == 0 && endRunOut[0] == 0 && doSplitOut[0] == 0 && isLoadingOut[0] == 0xFF)
+		{
+			Cmd[0] = 0; //no data to send
 			ret = sendwait(bss, clientfd, Cmd, 1);
 			CHECK_ERROR(ret < 0);
 
-			ret = sendwait(bss, clientfd, isNewRun, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, hasRunEnded, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, doSplit_DKC, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, isLoading_DKC, 1);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, &timeBase, 8);
-			CHECK_ERROR(ret < 0);
-
-			ret = sendwait(bss, clientfd, &loadingFrames, 4);
-			CHECK_ERROR(ret < 0);
+			continue;
 		}
+
+		//Gets the time since epoch in Milliseconds when a command is triggered
+		timeBase = OSGetTime();
+		timeBase = timeBase / OneMillisecond;
+
+		//Sending all data vars
+		Cmd[0] = 1;
+
+		ret = sendwait(bss, clientfd, Cmd, 1);
+		CHECK_ERROR(ret < 0); //Check after every send if the data went through, if not disconnect immediately
+
+		//New Run/End Run
+		ret = sendwait(bss, clientfd, newRunOut, 1);
+		CHECK_ERROR(ret < 0);
+
+		ret = sendwait(bss, clientfd, endRunOut, 1);
+		CHECK_ERROR(ret < 0);
+
+		ret = sendwait(bss, clientfd, doSplitOut, 1);
+		CHECK_ERROR(ret < 0);
+
+		ret = sendwait(bss, clientfd, isLoadingOut, 1);
+		CHECK_ERROR(ret < 0);
+
+		//Current Timebase and Loading Frames
+		ret = sendwait(bss, clientfd, &timeBase, 8);
+		CHECK_ERROR(ret < 0);
+
+		ret = sendwait(bss, clientfd, &loadingFrames, 4);
+		CHECK_ERROR(ret < 0);
     }
 
+	DestroyAutoSplitterSystem();
 	return 0;
 error:
 	bss->error = ret;
+
+	DestroyAutoSplitterSystem();
 	return 0;
 }
 
@@ -819,6 +773,12 @@ static int run_inputViewer(struct pygecko_bss_t *bss, int clientfd)
 
 				if (((g_currentInputDataKPAD.classic.btns_d & WPAD_CLASSIC_BUTTON_MINUS) == WPAD_CLASSIC_BUTTON_MINUS) || (g_currentInputDataKPAD.classic.btns_h & WPAD_CLASSIC_BUTTON_MINUS) == WPAD_CLASSIC_BUTTON_MINUS)
 					Buttons2[0] += 4;
+
+				//if (((g_currentInputDataKPAD.classic.btns_d & VPAD_BUTTON_STICK_L) == VPAD_BUTTON_STICK_L) || (g_currentInputDataKPAD.classic.btns_h & VPAD_BUTTON_STICK_L) == VPAD_BUTTON_STICK_L)
+					//Buttons2[0] += 2;
+
+				//if (((g_currentInputDataKPAD.classic.btns_d & VPAD_BUTTON_STICK_R) == VPAD_BUTTON_STICK_R) || (g_currentInputDataKPAD.classic.btns_h & VPAD_BUTTON_STICK_R) == VPAD_BUTTON_STICK_R)
+					//Buttons2[0] += 1;
 
 
 				//Button 3

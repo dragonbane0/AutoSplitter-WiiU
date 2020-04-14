@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2015 Dimok
+ * Copyright (C) 2018 Marwin Misselhorn
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,31 +14,34 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ****************************************************************************/
-#ifndef __MEMORY_H_
-#define __MEMORY_H_
+
+#ifndef _AUTO_SPLITTER_SYSTEM_H_
+#define _AUTO_SPLITTER_SYSTEM_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <malloc.h>
+#include <gctypes.h>
 
-void memoryInitialize(void);
-void memoryRelease(void);
+	typedef struct
+	{
+		u8 enabled;
+		u8 usePtr;
+		u8 addressType;
+		u32 baseAddress;
+		u8 offsetCount;
+		u32* offsetsPtr;
+		u8 comparisonType;
+		void* valuePtr;
+	} SplitterCondition;
 
-void * MEM2_alloc(unsigned int size, unsigned int align);
-void * MEM2_malloc(unsigned int size);
-void * MEM2_realloc(void *ptr, unsigned int newSize);
-void MEM2_free(void *ptr);
-
-void * MEM1_alloc(unsigned int size, unsigned int align);
-void MEM1_free(void *ptr);
-
-void * MEMBucket_alloc(unsigned int size, unsigned int align);
-void MEMBucket_free(void *ptr);
+int SetupAutoSplitterSystem(const char *pJsonString);
+int RunAutoSplitterSystem(u32 inSplitIndex, u8* outNewRun, u8* outEndRun, u8* outDoSplit, u8* outLoadingStatus);
+void DestroyAutoSplitterSystem();
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // __MEMORY_H_
+#endif /* _AUTO_SPLITTER_SYSTEM_H_ */

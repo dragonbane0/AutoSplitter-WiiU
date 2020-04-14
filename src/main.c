@@ -28,7 +28,7 @@
 static int app_launched = 0;
 
 //Global Extern Vars
-const char *HOST_IP = "192.168.2.104";
+const char *HOST_IP = "192.168.178.23";
 
 VPADData g_currentInputData;
 KPADData g_currentInputDataKPAD;
